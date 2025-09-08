@@ -1,0 +1,11 @@
+OrderID,OrderDate,Customer,Region,Product,Category,Quantity,UnitPrice,TotalSales
+1001,2023-01-07,Amit Kumar,North,Laptop,Electronics,2,50000,100000
+1002,2023-01-08,Meera Singh,West,Smartphone,Electronics,1,25000,25000
+1003,2023-01-09,Nitin Rao,South,Table,Home,3,7000,21000
+1004,2023-01-10,Maya Patel,East,Refrigerator,Appliances,1,30000,30000
+1005,2023-01-11,Renu Mehta,North,Shirt,Clothing,4,800,3200
+1006,2023-01-11,Gagan Jain,West,Headphones,Electronics,6,2000,12000
+1007,2023-01-12,Kiran Verma,South,Sofa,Home,1,25000,25000
+1008,2023-01-13,Raj Kumar,East,Microwave,Appliances,2,9000,18000
+1009,2023-01-14,Sonal Malhotra,North,Jacket,Clothing,2,1800,3600
+1010,2023-01-15,Deepak Sharma,South,Washing Machine,Appliances,1,32000,32000

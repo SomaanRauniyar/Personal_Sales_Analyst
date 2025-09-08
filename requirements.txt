@@ -1,0 +1,40 @@
+# --- Core ---
+python-dotenv
+tqdm
+requests
+psutil
+
+# --- Cloud / APIs ---
+groq
+pinecone-client
+google-cloud-aiplatform
+
+# --- Data handling ---
+pandas
+numpy
+sentence-transformers
+transformers
+
+# --- File parsing (used in file_parser.py) ---
+pdfplumber
+pdfminer.six
+pypdf          # optional fallback/text extraction
+python-docx
+docx2txt       # optional: quick text-only extraction
+openpyxl       # xlsx support for pandas.read_excel
+xlrd           # xls support for pandas.read_excel
+
+# --- Backend/API (soon) ---
+fastapi
+uvicorn[standard]
+
+# --- UI (Streamlit option) ---
+streamlit
+
+# --- Visualization (for charts in answers) ---
+matplotlib
+plotly
+
+# --- RAG helpers (optional) ---
+langchain
+langchain-community
