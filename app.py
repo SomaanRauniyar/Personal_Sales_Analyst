@@ -4,6 +4,7 @@ import pandas as pd
 from io import BytesIO
 import os
 from dotenv import load_dotenv
+import numpy as np  # <-- ADDED
 
 from src.vector_manager import VectorDBManager
 from src.embeddings import embed_chunks
@@ -15,7 +16,6 @@ from src.config import PINECONE_API_KEY as CFG_PINECONE_API_KEY, PINECONE_INDEX 
 
 load_dotenv()
 
-# Prefer src.config values; fall back to env for backward compatibility
 PINECONE_API_KEY = CFG_PINECONE_API_KEY or os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = CFG_PINECONE_INDEX or os.getenv("PINECONE_INDEX") or os.getenv("PINECONE_INDEX_NAME")
 if not PINECONE_API_KEY or not PINECONE_INDEX:
@@ -32,6 +32,22 @@ vector_db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
 DATA_CACHE = {}
 
 
+def safe_json_records(records):
+    # Returns a list of dicts with all NaN, inf, -inf replaced with None for JSON serialization.
+    safe = []
+    for row in records:
+        clean_row = {}
+        for k, v in row.items():
+            if isinstance(v, float):
+                if np.isnan(v) or np.isinf(v):
+                    clean_row[k] = None
+                else:
+                    clean_row[k] = float(v)
+            else:
+                clean_row[k] = v
+        safe.append(clean_row)
+    return safe
+
 @app.get("/")
 def root():
     return {"status": "ok", "message": "Biz Analyst API running"}
@@ -46,7 +62,6 @@ async def upload(file: UploadFile = File(...), user_id: str = Form(...)):
     filename = file.filename
     try:
         parsed = parse_file(BytesIO(contents), filename=filename)
-
         chunks = []
         for i, row in enumerate(parsed):
             chunks.append(
@@ -57,9 +72,7 @@ async def upload(file: UploadFile = File(...), user_id: str = Form(...)):
                     "content": str(row),
                 }
             )
-
         embedded_chunks = embed_chunks(chunks)
-
         vectors = [
             {
                 "id": chunk["chunk_id"],
@@ -72,34 +85,37 @@ async def upload(file: UploadFile = File(...), user_id: str = Form(...)):
             }
             for chunk in embedded_chunks
         ]
-
         namespace = f"user_{user_id}_{filename}"
         vector_db.upsert_vectors(vectors, namespace=namespace)
 
         if filename.lower().endswith(".csv"):
             df = pd.DataFrame(parsed)
-            # ensure numeric columns are correctly typed (in case of stray quotes)
+            # ensure numeric columns are correctly typed
             for c in df.columns:
                 if df[c].dtype == object:
                     coerced = pd.to_numeric(df[c], errors="ignore")
                     df[c] = coerced
             preview = df.head(5).to_dict(orient="records")
+            preview = safe_json_records(preview)  # <-- ENSURE JSON SAFETY
             columns = df.columns.tolist()
-            # cache for later visualization queries
             DATA_CACHE[(user_id, filename)] = df
         else:
-            # if parser returned list of dicts (tables from PDF/DOCX), cache as DataFrame
             if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
                 df = pd.DataFrame(parsed)
-                # numeric coercion
                 for c in df.columns:
                     if df[c].dtype == object:
                         df[c] = pd.to_numeric(df[c], errors="ignore")
                 preview = df.head(5).to_dict(orient="records")
+                preview = safe_json_records(preview)  # <-- ENSURE JSON SAFETY
                 columns = df.columns.tolist()
                 DATA_CACHE[(user_id, filename)] = df
             else:
                 preview = parsed[:5]
+                # Replace any nan, inf in text fallback too!
+                preview = [
+                    (p if isinstance(p, dict) else {"text": str(p)}) for p in preview
+                ]
+                preview = safe_json_records(preview)
                 columns = []
 
         return {
@@ -110,7 +126,6 @@ async def upload(file: UploadFile = File(...), user_id: str = Form(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
 
 @app.post("/query")
 def query_text(
@@ -127,7 +142,6 @@ def get_schema(user_id: str = Query(...), file_id: str = Query(...)):
     df = DATA_CACHE.get((user_id, file_id))
     if df is None or df.empty:
         return {"columns": [], "types": {}}
-    # prepare simple type hints
     types = {}
     for c in df.columns:
         if pd.api.types.is_numeric_dtype(df[c]):
@@ -148,9 +162,7 @@ def visualize_by_query(
     y: str | None = Form(None),
     aggregate: str | None = Form(None)
 ):
-    # Prefer cached DataFrame from upload
     df = DATA_CACHE.get((user_id, file_id))
-
     def _parse_plot_query(q: str, df_cols):
         ql = (q or "").lower()
         chart = "bar"
@@ -162,7 +174,6 @@ def visualize_by_query(
             chart = "pie"
         elif "hist" in ql:
             chart = "histogram"
-
         import re
         x = None
         y = None
@@ -177,7 +188,6 @@ def visualize_by_query(
             if m:
                 left, _, right = m.groups()
                 x, y = left.strip(), right.strip()
-
         def _resolve(name):
             if not name:
                 return None
@@ -185,18 +195,15 @@ def visualize_by_query(
                 if c.lower() == name.lower():
                     return c
             return None
-
         x = _resolve(x)
         y = _resolve(y)
         return chart, x, y
 
     if df is not None and not df.empty:
-        # final coercion pass to detect numeric types robustly
         for c in df.columns:
             if df[c].dtype == object:
                 df[c] = pd.to_numeric(df[c], errors="ignore")
         types = detect_column_types(df)
-        # explicit overrides from form take precedence
         if not x and not y:
             chart, x, y = _parse_plot_query(visualization_query, df.columns)
         else:
@@ -207,20 +214,16 @@ def visualize_by_query(
         if y is None:
             y = (types["numerical"][0] if types["numerical"] else None)
 
-        # Support multi-x (comma-separated). Validate columns
         x_list = [c.strip() for c in (x.split(",") if isinstance(x, str) else [x]) if c]
         for xv in x_list:
             if xv not in df.columns:
                 return {"plots": [], "error": f"Column not found for x: {xv}"}
         if y and y not in df.columns:
             return {"plots": [], "error": f"Column not found for y: {y}"}
-
         agg_fn = (aggregate or "sum").lower()
         if agg_fn not in ("sum", "mean", "count"):
             agg_fn = "sum"
-
         figs = []
-        # For multiple X columns, create one plot per X
         if chart == "line" and y and x_list:
             for xv in x_list:
                 figs.append(px.line(df, x=xv, y=y, title=f"{y} over {xv}"))
@@ -252,8 +255,8 @@ def visualize_by_query(
             figs.append(px.bar(agg_df, x=xv, y=y, title=f"{y} by {xv}"))
         else:
             figs = recommend_visualizations(df)
-
         try:
+            # JSON safety: nothing to do here—plot.to_json() is always safe
             return {"plots": [fig.to_json() for fig in figs]}
         except Exception as e:
             return {"plots": [], "error": f"Plot rendering failed: {str(e)}"}
@@ -262,7 +265,6 @@ def visualize_by_query(
     namespace = f"user_{user_id}_{file_id}"
     full_query = f"{visualization_query}\nData source: {file_id}"
     llm_result = query_llm(full_query, namespace=namespace)
-
     import ast
     items = []
     for src in llm_result.get("resolved_sources", []):
