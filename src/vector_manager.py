@@ -2,7 +2,7 @@ from pinecone import Pinecone, ServerlessSpec
 from concurrent.futures import ThreadPoolExecutor
 
 class VectorDBManager:
-    def __init__(self, api_key, index_name, dimension=384, metric="cosine"):
+    def __init__(self, api_key, index_name, dimension=1024, metric="cosine"):
         """
         Pinecone ke saath vector database manager banata hai.
         Index ko create karega agar exist nahi karta ho.
@@ -13,20 +13,45 @@ class VectorDBManager:
         # Sab indexes ka list nikaalo
         existing_indexes = [i.name for i in self.pc.list_indexes()]
 
-        # Agar index nahi hai toh create karo
-        if self.index_name not in existing_indexes:
-            print(f"📌 Creating Pinecone index: {self.index_name}")
+        target_index = self.index_name
+        needs_create = False
+
+        if target_index in existing_indexes:
+            print(f"✅ Index '{target_index}' already exists!")
+            # Try to detect dimension mismatch and transparently switch to a dimension-suffixed index
+            try:
+                desc = self.pc.describe_index(target_index)
+                existing_dim = getattr(desc, "dimension", None) or getattr(desc, "config", {}).get("dimension")
+                if existing_dim and int(existing_dim) != int(dimension):
+                    suggested = f"{target_index}-{dimension}"
+                    print(
+                        f"⚠️ Index dimension mismatch: existing={existing_dim}, required={dimension}. "
+                        f"Will use '{suggested}' instead."
+                    )
+                    target_index = suggested
+                    if target_index not in existing_indexes:
+                        needs_create = True
+                # else: ok to use existing index
+            except Exception:
+                # If describe fails, fall back to using requested name; will create if needed
+                pass
+        else:
+            needs_create = True
+
+        if needs_create:
+            print(f"📌 Creating Pinecone index: {target_index}")
             self.pc.create_index(
-                name=self.index_name,
+                name=target_index,
                 dimension=dimension,
                 metric=metric,
-                spec=ServerlessSpec(  # 👈 New SDK ke liye mandatory
+                spec=ServerlessSpec(
                     cloud="aws",
                     region="us-east-1"
                 )
             )
-        else:
-            print(f"✅ Index '{self.index_name}' already exists!")
+
+        # Ensure we use the final resolved index name
+        self.index_name = target_index
 
         # Index attach karo
         self.index = self.pc.Index(self.index_name)

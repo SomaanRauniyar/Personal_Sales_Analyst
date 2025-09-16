@@ -3,17 +3,17 @@ import os
 import hashlib
 import pandas as pd
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 from src.vector_manager import VectorDBManager
+from src.config import EMBED_DIM
+from src.embeddings import get_embedding
 
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX", "biz-analyst")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "biz-analyst-1024")
 NAMESPACE = os.getenv("PINECONE_NAMESPACE", "default")
 
-# Embedder
-embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+# Cohere-based embedding via src.embeddings.get_embedding
 
 # Config
 MAX_ROWS = 200           # set None to ingest all
@@ -106,7 +106,7 @@ def ingest_csv_to_pinecone(csv_path: str, max_rows: int = MAX_ROWS):
         print(f"⚡ Limiting ingestion to first {len(df)} rows for testing.")
 
     # init pinecone manager
-    db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
+    db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX, dimension=EMBED_DIM)
 
     vectors = []
     for i, row in df.iterrows():
@@ -114,7 +114,7 @@ def ingest_csv_to_pinecone(csv_path: str, max_rows: int = MAX_ROWS):
         vector_id = f"{file_id}__{chunk_id}"
 
         row_text = row_to_text(row)
-        embedding = embedder.encode(row_text).tolist()
+        embedding = get_embedding(row_text)
 
         metadata = {
             "content": row_text,

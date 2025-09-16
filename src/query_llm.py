@@ -76,7 +76,7 @@ Important: Do not add any extra text outside the JSON. Do not include chain-of-t
 
 def query_llm(query: str, top_k: int = TOP_K, max_context_chars: int = MAX_CONTEXT_CHARS, namespace: str = None) -> Dict[str, Any]:
     db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
-    query_vector = get_embedding(query)
+    query_vector = get_embedding(query, is_query=True)
 
     if namespace:
         result = db.query(vector=query_vector, top_k=top_k, namespace=namespace)

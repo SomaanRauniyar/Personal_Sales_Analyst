@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import numpy as np  # <-- ADDED
 
 from src.vector_manager import VectorDBManager
+from src.config import EMBED_DIM
 from src.embeddings import embed_chunks
 from src.file_parser import parse_file
 from src.query_llm import query_llm
@@ -26,7 +27,7 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 
-vector_db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
+vector_db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX, dimension=EMBED_DIM)
 
 # In-memory cache for uploaded DataFrames keyed by (user_id, filename)
 DATA_CACHE = {}
@@ -232,27 +233,37 @@ def visualize_by_query(
                 figs.append(px.scatter(df, x=xv, y=y, title=f"{y} vs {xv}"))
         elif chart == "pie" and y and x_list:
             xv = x_list[0]
-            grouped = df.groupby(xv)[y]
-            if agg_fn == "mean":
-                agg_df = grouped.mean().reset_index()
-            elif agg_fn == "count":
-                agg_df = grouped.count().reset_index()
+            if y == xv:
+                # Avoid duplicate column name on reset_index; use counts
+                agg_df = df.groupby(xv).size().reset_index(name="count")
+                figs.append(px.pie(agg_df, names=xv, values="count", title=f"count by {xv}"))
             else:
-                agg_df = grouped.sum().reset_index()
-            figs.append(px.pie(agg_df, names=xv, values=y, title=f"{y} by {xv}"))
+                grouped = df.groupby(xv)[y]
+                if agg_fn == "mean":
+                    agg_df = grouped.mean().reset_index()
+                elif agg_fn == "count":
+                    agg_df = grouped.count().reset_index()
+                else:
+                    agg_df = grouped.sum().reset_index()
+                figs.append(px.pie(agg_df, names=xv, values=y, title=f"{y} by {xv}"))
         elif chart == "histogram" and (y or x):
             col = y or x_list[0]
             figs.append(px.histogram(df, x=col, title=f"Distribution of {col}"))
         elif y and x_list:
             xv = x_list[0]
-            grouped = df.groupby(xv)[y]
-            if agg_fn == "mean":
-                agg_df = grouped.mean().reset_index()
-            elif agg_fn == "count":
-                agg_df = grouped.count().reset_index()
+            if y == xv:
+                # Grouping and aggregating the same column causes a name clash; use counts
+                agg_df = df.groupby(xv).size().reset_index(name="count")
+                figs.append(px.bar(agg_df, x=xv, y="count", title=f"count by {xv}"))
             else:
-                agg_df = grouped.sum().reset_index()
-            figs.append(px.bar(agg_df, x=xv, y=y, title=f"{y} by {xv}"))
+                grouped = df.groupby(xv)[y]
+                if agg_fn == "mean":
+                    agg_df = grouped.mean().reset_index()
+                elif agg_fn == "count":
+                    agg_df = grouped.count().reset_index()
+                else:
+                    agg_df = grouped.sum().reset_index()
+                figs.append(px.bar(agg_df, x=xv, y=y, title=f"{y} by {xv}"))
         else:
             figs = recommend_visualizations(df)
         try:

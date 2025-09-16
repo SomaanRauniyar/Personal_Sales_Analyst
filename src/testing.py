@@ -1,4 +1,5 @@
 from src.vector_manager import VectorDBManager
+from src.config import EMBED_DIM
 from src.embeddings import get_embedding
 import os
 from dotenv import load_dotenv
@@ -7,10 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX", "biz-analyst")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "biz-analyst-1024")
 
 def main():
-    db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
+    db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX, dimension=EMBED_DIM)
 
     # Sample text
     text = "This is a test document about customer sales and revenue."

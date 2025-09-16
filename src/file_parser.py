@@ -9,13 +9,23 @@ from io import BytesIO
 # -----------------------------
 def parse_csv(file_obj):
     """
-    Reads a CSV file (path or file-like object) and returns all rows as a list of dicts.
+    Reads a CSV/TSV file (path or file-like object) and returns all rows as a list of dicts.
+    Automatically detects delimiters (comma, tab, semicolon) using pandas' parser.
     """
+    def _read(obj):
+        # Try utf-8 with auto delimiter detection; fall back to latin-1
+        try:
+            return pd.read_csv(obj, sep=None, engine='python', encoding='utf-8')
+        except Exception:
+            if isinstance(obj, BytesIO):
+                obj.seek(0)
+            return pd.read_csv(obj, sep=None, engine='python', encoding='latin-1')
+
     if isinstance(file_obj, BytesIO):
         file_obj.seek(0)
-        df = pd.read_csv(file_obj, encoding='latin-1')
+        df = _read(file_obj)
     else:
-        df = pd.read_csv(file_obj, encoding='latin-1')
+        df = _read(file_obj)
 
     # Basic cleanup: strip stray quotes/whitespace and coerce numerics
     for col in df.columns:
