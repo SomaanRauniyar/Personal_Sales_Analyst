@@ -1,37 +1,32 @@
-# Multi-stage Dockerfile for FastAPI backend
-
-FROM python:3.11-slim-bookworm AS base
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
-
+FROM python:3.10-slim
+#This uses the minimal official Python 3.10 base image, 
+# which gives you a lightweight Python environment suitable for building and running your backend API service efficiently.
 WORKDIR /app
+#sets working dir inside the docker container
 
-# System deps (kept minimal). We install build tools in a temporary stage
-FROM base AS builder
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt ./
-RUN pip install --upgrade pip && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+# now we will copy the backend requirements and load them , this is done to ensure that if there is no change in requirements 
+# but change in any part of the code the rebuild will begin from the next step by pre-loading this info via cache memory \
+COPY requirements-backend.txt ./requirements-backend.txt 
+# this line means copy the local requirements.txt file from current dir to docker container in app/requirments-backend.txt
 
-FROM base AS runtime
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN pip install --no-cache-dir -r  requirements-backend.txt
+# RUN executed a command in a new layer
+#--no-cache-dir ensures nothing additional gets downloaded locally...
 
-COPY --from=builder /wheels /wheels
-COPY --from=builder /app/requirements.txt /app/requirements.txt
-# Install as root, then switch to non-root. Clean wheels as root to avoid permission errors.
-RUN pip install --no-cache-dir --break-system-packages --find-links=/wheels -r requirements.txt \
-    && rm -rf /wheels || true
-
-# Drop privileges for runtime
-USER appuser
-
-# Copy application code
+#now we will copy only the files required to run backend fastapi container
+#1.src folder
+#2.app.py
 COPY src ./src
-COPY app.py ./app.py
-COPY app ./app
+COPY app.py  ./app.py
+#so structure inside the docker container looks like this :
+    #1.app (root)
+    #2. requirements-backend.txt , src , app.py 
 
+# port exposing : tell the users and developers to which port the container listens on 
+# we need to map the host port to users port to establish a communication link
 EXPOSE 8000
+#we dont map the host container port in the docker file itself the user does it by this line :
+    # docker run -p 8000:8000 your_image_name
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
-
-
+    #finally the start command to run the fastapi service :
+CMD ["uvicorn" ,"app:app" ,"--host" ,"0.0.0.0" ,"--port","8000"]
