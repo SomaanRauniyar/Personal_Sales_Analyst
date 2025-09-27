@@ -4,17 +4,15 @@ import plotly.io as pio
 from pathlib import Path
 import os
 
-# Get API URL from environment variable (for production) or default to localhost
+# Get API URL from environment variable or default to localhost
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 def load_custom_css():
-    """Load custom CSS styling"""
     css_file = Path("app/static/style.css")
     if css_file.exists():
         with open(css_file, "r") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     else:
-        # Fallback inline CSS if file doesn't exist
         st.markdown("""
         <style>
         .main-header {
@@ -39,9 +37,12 @@ def load_custom_css():
             color: white;
             border: none;
             border-radius: 12px;
-            padding: 12px 24px;
+            padding: 0.4rem 0.7rem;
             font-weight: 600;
+            font-size: 1.2rem;
             transition: all 0.3s ease;
+            line-height: 1;
+            cursor: pointer;
         }
         .stButton > button:hover {
             transform: translateY(-2px);
@@ -51,14 +52,68 @@ def load_custom_css():
         """, unsafe_allow_html=True)
 
 st.set_page_config(
-    page_title="DataInsight Pro", 
-    page_icon="📊", 
+    page_title="DataInsight Pro",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Load custom CSS
 load_custom_css()
+
+# Sidebar toggle state
+if 'sidebar_collapsed' not in st.session_state:
+    st.session_state['sidebar_collapsed'] = False
+
+if not st.session_state['sidebar_collapsed']:
+    with st.sidebar:
+        if st.button('<<'):
+            st.session_state['sidebar_collapsed'] = True
+
+        st.markdown("""
+        <div style="text-align: center; padding: 1rem 0;">
+            <h2 style="color: var(--primary-color); margin-bottom: 0.5rem;">🚀 Quick Start</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Upload your data and start analyzing</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        user_id = st.text_input(
+            "👤 User ID",
+            placeholder="Enter your unique ID",
+            key="user_id",
+            help="This helps us organize your data securely"
+        )
+
+        uploaded_file = st.file_uploader(
+            "📁 Upload Data File",
+            type=["csv", "pdf", "docx", "xlsx"],
+            key="file_uploader",
+            help="Supported formats: CSV, PDF, DOCX, Excel"
+        )
+
+        st.markdown("---")
+
+        st.markdown("""
+        <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-lg); margin: 1rem 0;">
+            <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">✨ Features</h4>
+            <ul style="color: var(--text-secondary); font-size: 0.85rem; margin: 0; padding-left: 1.2rem;">
+                <li>AI-powered data analysis</li>
+                <li>Automatic visualization</li>
+                <li>Natural language queries</li>
+                <li>Custom plot builder</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="text-align: center; margin-top: 2rem;">
+            <p style="color: var(--text-muted); font-size: 0.8rem;">Built with ❤️ for modern analytics</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+else:
+    # Show expand button on main page area when sidebar is collapsed
+    if st.button('>>'):
+        st.session_state['sidebar_collapsed'] = False
 
 # Main Header
 st.markdown("""
@@ -68,51 +123,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar navigation and inputs
-with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; padding: 1rem 0;">
-        <h2 style="color: var(--primary-color); margin-bottom: 0.5rem;">🚀 Quick Start</h2>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">Upload your data and start analyzing</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    user_id = st.text_input(
-        "👤 User ID", 
-        placeholder="Enter your unique ID",
-        key="user_id",
-        help="This helps us organize your data securely"
-    )
-    
-    uploaded_file = st.file_uploader(
-        "📁 Upload Data File",
-        type=["csv", "pdf", "docx", "xlsx"],
-        key="file_uploader",
-        help="Supported formats: CSV, PDF, DOCX, Excel"
-    )
-    
-    st.markdown("---")
-    
-    # Feature highlights
-    st.markdown("""
-    <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-lg); margin: 1rem 0;">
-        <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">✨ Features</h4>
-        <ul style="color: var(--text-secondary); font-size: 0.85rem; margin: 0; padding-left: 1.2rem;">
-            <li>AI-powered data analysis</li>
-            <li>Automatic visualization</li>
-            <li>Natural language queries</li>
-            <li>Custom plot builder</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="text-align: center; margin-top: 2rem;">
-        <p style="color: var(--text-muted); font-size: 0.8rem;">Built with ❤️ for modern analytics</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Tabs for main app sections
+# Tabs and main page logic follows
 tab1, tab2, tab3, tab4 = st.tabs(
     ["📊 Overview", "📈 Analytics", "🤖 AI Assistant", "🎨 Visualizations"]
 )
@@ -121,6 +132,9 @@ file_id = None
 data_preview = None
 columns = []
 upload_error = None
+
+user_id = st.session_state.get('user_id', None)
+uploaded_file = st.session_state.get('file_uploader', None)
 
 if uploaded_file and user_id:
     with st.spinner("Uploading and analyzing your file..."):
@@ -132,7 +146,6 @@ if uploaded_file and user_id:
             file_id = upload_result.get("filename", uploaded_file.name)
             data_preview = upload_result.get("preview", [])
             columns = upload_result.get("columns", [])
-            # Store to session state for later use
             st.session_state["uploaded_columns"] = columns
             st.session_state["uploaded_file_id"] = file_id
             st.session_state["uploaded_user_id"] = user_id
@@ -145,25 +158,23 @@ with tab1:
         <h2 style="color: var(--primary-color); margin-bottom: 1rem;">📊 Data Overview</h2>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if upload_error:
         st.error(f"❌ Upload failed: {upload_error}")
     elif data_preview:
-        # Success message with file info
         st.markdown(f"""
         <div class="status-indicator status-success" style="margin-bottom: 1rem;">
             ✅ File '{file_id}' uploaded successfully
         </div>
         """, unsafe_allow_html=True)
-        
-        # Data preview in a styled container
+
         st.markdown("""
         <div class="data-card">
             <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📋 Data Preview</h3>
         </div>
         """, unsafe_allow_html=True)
         st.dataframe(data_preview, width='stretch')
-        
+
         try:
             sch = requests.get(
                 f"{API_URL}/schema",
@@ -172,40 +183,36 @@ with tab1:
             ).json()
             columns = sch.get("columns", columns)
             st.session_state["uploaded_columns"] = columns
-            
-            # Show column info
+
             if columns:
                 st.markdown("""
                 <div class="data-card">
                     <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 Dataset Schema</h3>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Total Columns", len(columns))
                 with col2:
                     st.metric("Data Types", len(set(sch.get("types", {}).values())))
-                
-                # Column types display
+
                 types = sch.get("types", {})
                 if types:
                     st.markdown("**Column Information:**")
                     for col, col_type in types.items():
                         st.markdown(f"• **{col}**: `{col_type}`")
-                        
         except Exception:
             pass
     else:
         st.info("👆 Upload a file above to preview your data")
 
-    # AI Summary Section
     st.markdown("""
     <div class="data-card">
         <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🤖 AI-Powered Data Summary</h3>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if file_id:
         with st.spinner("🧠 AI is analyzing your data..."):
             try:
@@ -218,7 +225,6 @@ with tab1:
                     }
                 )
                 summary = summary_resp.json().get("answer", "No summary returned.")
-                
                 st.markdown(f"""
                 <div class="data-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);">
                     <div style="color: var(--text-primary); line-height: 1.6;">
@@ -238,7 +244,7 @@ with tab2:
         <p style="color: var(--text-secondary); margin-bottom: 0;">AI-powered insights and automatic visualizations</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if file_id:
         with st.spinner("🔍 Analyzing patterns and generating insights..."):
             try:
@@ -257,10 +263,9 @@ with tab2:
                         <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 Key Insights & Trends</h3>
                     </div>
                     """, unsafe_allow_html=True)
-                    
+
                     for i, plot_json in enumerate(plot_jsons):
                         fig = pio.from_json(plot_json)
-                        # Update plot styling for professional look
                         fig.update_layout(
                             plot_bgcolor='rgba(0,0,0,0)',
                             paper_bgcolor='rgba(0,0,0,0)',
@@ -283,9 +288,8 @@ with tab3:
         <p style="color: var(--text-secondary); margin-bottom: 0;">Ask questions about your data in natural language</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if file_id:
-        # Example questions
         st.markdown("""
         <div class="data-card">
             <h3 style="color: var(--text-primary); margin-bottom: 1rem;">💡 Try asking:</h3>
@@ -305,7 +309,7 @@ with tab3:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         user_query = st.text_area(
             "💬 Ask your question", 
             placeholder="e.g., What are the key patterns in my data?",
@@ -313,7 +317,7 @@ with tab3:
             height=100,
             help="Ask any question about your uploaded data"
         )
-        
+
         if user_query:
             with st.spinner("🧠 AI is thinking..."):
                 try:
@@ -322,7 +326,6 @@ with tab3:
                         params={"user_query": user_query, "user_id": user_id, "file_id": file_id}
                     )
                     answer = response.json().get("answer", "No response available.")
-                    
                     st.markdown(f"""
                     <div class="data-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(34, 197, 94, 0.05) 100%);">
                         <h4 style="color: var(--success-color); margin-bottom: 1rem;">🤖 AI Response</h4>
@@ -343,51 +346,50 @@ with tab4:
         <p style="color: var(--text-secondary); margin-bottom: 0;">Build professional charts tailored to your needs</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     cols_available = st.session_state.get("uploaded_columns", [])
     fid = st.session_state.get("uploaded_file_id")
     uid = st.session_state.get("uploaded_user_id")
-    
+
     if fid and uid and cols_available:
         st.markdown("""
         <div class="data-card">
             <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🛠️ Plot Builder</h3>
         </div>
         """, unsafe_allow_html=True)
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             chart_type = st.selectbox(
-                "📊 Chart Type", 
-                ["bar", "line", "scatter", "pie", "histogram"], 
+                "📊 Chart Type",
+                ["bar", "line", "scatter", "pie", "histogram"],
                 index=0,
                 help="Choose the type of visualization"
             )
-            
             x_cols = st.multiselect(
-                "📈 X-axis Columns", 
-                cols_available, 
+                "📈 X-axis Columns",
+                cols_available,
                 default=cols_available[:1] if cols_available else [],
                 help="Select one or more columns for the X-axis"
             )
-        
+
         with col2:
             y_col = st.selectbox(
-                "📉 Y-axis Column", 
+                "📉 Y-axis Column",
                 cols_available,
                 help="Select the column for the Y-axis"
             )
-            
+
             agg = st.selectbox(
-                "🔢 Aggregation", 
-                ["sum", "mean", "count", "none"], 
+                "🔢 Aggregation",
+                ["sum", "mean", "count", "none"],
                 index=0,
                 help="Choose how to aggregate data (for bar/pie charts)"
             )
-        
+
         build_btn = st.button("🚀 Create Visualization", type="primary")
-        
+
         if build_btn:
             parts = [f"{chart_type}"]
             if x_cols:
@@ -397,7 +399,7 @@ with tab4:
             if agg and agg != "none":
                 parts.append(f"aggregate: {agg}")
             built_query = " ".join(parts)
-            
+
             with st.spinner("🎨 Creating your visualization..."):
                 try:
                     resp = requests.post(
@@ -419,10 +421,9 @@ with tab4:
                             <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📊 Your Custom Visualization</h3>
                         </div>
                         """, unsafe_allow_html=True)
-                        
+
                         for i, plot_json in enumerate(plot_jsons):
                             fig = pio.from_json(plot_json)
-                            # Apply professional styling
                             fig.update_layout(
                                 plot_bgcolor='rgba(0,0,0,0)',
                                 paper_bgcolor='rgba(0,0,0,0)',

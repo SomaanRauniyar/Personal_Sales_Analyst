@@ -423,6 +423,17 @@ p {
     }
 }
 
+/* Streamlit Manual Dark Mode Support */
+body[data-theme="dark"], .dark-mode {
+    --bg-primary: #0e1117;
+    --bg-secondary: #15191e;
+    --bg-tertiary: #23272f;
+    --text-primary: #fafafa;
+    --text-secondary: #d1d5db;
+    --border-color: #23272f;
+    --border-light: #15191e;
+}
+
 /* Custom Components */
 .metric-grid {
     display: grid;
