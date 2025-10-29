@@ -1,79 +1,76 @@
-DataInsight Pro - AI-Powered Data Analytics App
-About the App
-DataInsight Pro is an AI-powered data analysis and visualization application built with Streamlit for the frontend and FastAPI for the backend. The app supports uploading multiple file formats (CSV, PDF, DOCX, Excel), performs automatic data insights, natural language queries, and generates professional visualizations with customizable plots.
-
-The backend uses powerful APIs and vector databases for fast query responses and intelligent analysis.
+DataInsight Pro
+Project Overview
+DataInsight Pro is a robust, AI-powered analytics application designed for intuitive exploration and insight generation from personal or business sales data. It supports seamless upload and parsing of multiple file types, delivers context-aware responses, and generates custom visualizations through an advanced Retrieval-Augmented Generation (RAG) pipeline.​
 
 Features
-Upload CSV, PDF, DOCX, Excel files for data analysis
+Multi-format data upload: Accepts CSV, Excel, and PDF files with smart parsing and auto-detection.
 
-Automatic AI-generated data summaries and insights
+Automated chunking: Segments data intelligently using the LangChain Recursive Text Splitter for optimized processing.
 
-Natural language querying of uploaded datasets
+AI embeddings: Converts data and user queries into vectorized formats using Cohere API for rapid semantic search.
 
-Rich built-in and custom visualizations using Plotly
+Vector database retrieval: Stores embeddings in Pinecone for fast similarity-based contextual fetches.
 
-Seamless backend and frontend integration with API endpoints
+LLM-powered answers: Leverages Groq API to generate contextual responses and executable plot code.
 
-Containerized with Docker for easy deployment on Render or locally
+Custom visualizations: Builds interactive charts with Matplotlib/Seaborn and displays them to users.
 
-Getting Started
-Prerequisites
-Docker installed on your machine
+Scalable modular design: Easily extensible for future data types, analytics, and integration.
 
-Docker Hub account (optional for pulling images)
+Architecture Diagram
+Below is the end-to-end user workflow and system architecture for DataInsight Pro, :
+![User Level Architecture Diagram](diagram-export-10-29-2025-5_52_00-PM.png)
 
-Render account (optional for deployment)
 
-Running Locally with Docker
-Clone this repository:
+​
 
-bash
-git clone https://github.com/yourusername/yourrepo.git
-cd yourrepo/csv_doc_analyst
-Build frontend and backend Docker images:
+Flow Description:
 
-Backend:
+Users upload data files.
 
-bash
-docker build -f Dockerfile.backend -t your_dockerhub_backend_image .
-Frontend:
+Data is parsed, chunked, embedded, and indexed for semantic retrieval.
 
-bash
-docker build -f Dockerfile.frontend -t your_dockerhub_frontend_image .
-Run backend (replace keys with your API keys):
+User queries trigger embedding search and LLM-driven answer generation.
 
-bash
-docker run -p 8000:8000 -e PINECONE_API_KEY='yourkey' -e GROQ_API_KEY='yourkey' -e COHERE_API_KEY='yourkey' your_dockerhub_backend_image
-Run frontend (set backend API URL):
+Requests for plots result in Python code generation and dynamic chart rendering.​
 
-bash
-docker run -p 8501:8501 -e API_URL='http://localhost:8000' your_dockerhub_frontend_image
-Open your browser:
+Quick Start
+Clone this repository
 
-Frontend UI: http://localhost:8501
+text
+git clone https://github.com/SomaanRauniyar/DataInsightPro.git
+Install dependencies
 
-Backend docs (Swagger UI): http://localhost:8000/docs
+text
+pip install -r requirements.txt
+Run the application
 
-Deploying on Render
-Push your frontend and backend images to Docker Hub.
+Launch in your preferred environment (web app, Jupyter Notebook, or backend).
 
-Create two new Web Services on Render:
+Upload your dataset and start querying or visualizing.
 
-Backend service: Use your backend image, port 8000, set required API keys as environment variables.
+Folder Structure
+text
+data/
+├── raw/
+├── processed/
+src/
+├── chunking.py
+├── embeddings.py
+├── file_parser.py
+├── vector_manager.py
+├── visualization.py
+notebooks/
+├── analysis.ipynb
+Technologies Used
+Python 3.x
 
-Frontend service: Use your frontend image, port 8501, set API_URL environment variable to backend's Render URL.
+FastAPI, Streamlit (optional for UI)
 
-Deploy and access your apps via Render URLs.
+Pandas, NumPy, Matplotlib, Seaborn
 
-Using the App with Sample Data
-Upload the test datasets from the datasets directory:
+LangChain, Cohere API, Pinecone DB, Groq API
 
-sample_sales.csv
+License
+Open source under the MIT License.
 
-employee_performance.xlsx
-
-You can use these files to test upload, query, and visualization features.
-
-Contributing
-Feel free to open issues or submit pull requests for improvements and bug fixes.
